@@ -1,25 +1,16 @@
 <script>
 	import { enhance } from '$app/forms';
-	import Confirm from '$lib/Confirm.svelte';
+	import { confirmAction } from '$lib/Confirm.svelte';
 	let { data, form } = $props();
 	const { client, licenses, grantable } = data;
 
 	let editing = $state(false);
-	let confirmOpen = $state(false);
-	let confirmCfg = $state({ title: '', message: '', danger: false });
-	let pendingSubmit = null;
+	let editForm = $state();
+	let grantForm = $state();
+	let unlinkForm = $state();
 
-	function armConfirm(cfg) {
-		return ({ cancel, submit }) => {
-			confirmCfg = cfg; pendingSubmit = submit; confirmOpen = true; cancel();
-			return async () => {};
-		};
-	}
-	function doConfirm() { confirmOpen = false; pendingSubmit?.(); pendingSubmit = null; }
 	function fmtDate(d) { return d ? new Date(d).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—'; }
 </script>
-
-<Confirm bind:open={confirmOpen} title={confirmCfg.title} message={confirmCfg.message} danger={confirmCfg.danger} confirmLabel={confirmCfg.danger ? 'Yes, do it' : 'Confirm'} onconfirm={doConfirm} />
 
 <a href="/clients" class="muted">← Back to clients</a>
 
@@ -33,8 +24,11 @@
 	</div>
 	<div style="display:flex; gap:8px;">
 		<button class="btn ghost" onclick={() => (editing = !editing)}>Edit</button>
-		<form method="POST" action="?/unlink" use:enhance={armConfirm({ title: 'Unlink client', message: `Unlink ${client.robloxName} and remove ALL ${licenses.length} of their licenses? This cannot be undone.`, danger: true })}>
-			<button class="btn danger" type="submit">Unlink</button>
+		<form method="POST" action="?/unlink" bind:this={unlinkForm} use:enhance>
+			<input type="hidden" name="confirm" value="1" />
+			<button class="btn danger" type="button"
+				onclick={() => confirmAction({ title: 'Unlink client', message: `Unlink ${client.robloxName} and remove ALL ${licenses.length} of their licenses? This cannot be undone.`, danger: true, run: () => unlinkForm.requestSubmit() })}
+			>Unlink</button>
 		</form>
 	</div>
 </div>
@@ -42,11 +36,13 @@
 {#if editing}
 	<div class="card">
 		<h2>Edit client</h2>
-		<form method="POST" action="?/edit" use:enhance={armConfirm({ title: 'Save changes', message: 'Update this client\'s Roblox/Discord IDs?' })}>
+		<form method="POST" action="?/edit" bind:this={editForm} use:enhance>
 			<div class="row">
 				<label>Roblox ID<input name="roblox" class="inp" value={client.roblox} required /></label>
 				<label>Discord ID<input name="discord" class="inp" value={client.discord} required /></label>
-				<button class="btn primary" type="submit" style="align-self:flex-end;">Save</button>
+				<button class="btn primary" type="button" style="align-self:flex-end;"
+					onclick={() => { if (editForm.reportValidity()) confirmAction({ title: 'Save changes', message: "Update this client's Roblox/Discord IDs?", run: () => editForm.requestSubmit() }); }}
+				>Save</button>
 			</div>
 		</form>
 	</div>
@@ -62,13 +58,15 @@
 
 <div class="card">
 	<h2>Grant a product</h2>
-	<form method="POST" action="?/grant" use:enhance={armConfirm({ title: 'Grant product', message: 'Grant this product to this client?' })}>
+	<form method="POST" action="?/grant" bind:this={grantForm} use:enhance>
 		<div class="row">
 			<select name="productId" class="inp" required>
 				<option value="">Select a product to grant…</option>
 				{#each grantable as p}<option value={p.id}>{p.name}</option>{/each}
 			</select>
-			<button class="btn primary" type="submit">Grant</button>
+			<button class="btn primary" type="button"
+				onclick={() => { if (grantForm.reportValidity()) confirmAction({ title: 'Grant product', message: 'Grant this product to this client?', run: () => grantForm.requestSubmit() }); }}
+			>Grant</button>
 		</div>
 		{#if grantable.length === 0}<p class="muted" style="margin-top:8px;">This client already owns every product.</p>{/if}
 	</form>
@@ -85,9 +83,11 @@
 					<td class="muted">{fmtDate(l.created)}</td>
 					<td class="right">
 						{#if l.productId}
-						<form method="POST" action="?/revoke" use:enhance={armConfirm({ title: 'Revoke product', message: `Revoke ${l.productName} from ${client.robloxName}?`, danger: true })} style="display:inline;">
+						<form method="POST" action="?/revoke" use:enhance style="display:inline;" id={`rev-${l.productId}`}>
 							<input type="hidden" name="productId" value={l.productId} />
-							<button class="btn-sm danger" type="submit">Revoke</button>
+							<button class="btn-sm danger" type="button"
+								onclick={(e) => confirmAction({ title: 'Revoke product', message: `Revoke ${l.productName} from ${client.robloxName}?`, danger: true, run: () => e.target.closest('form').requestSubmit() })}
+							>Revoke</button>
 						</form>
 						{/if}
 					</td>
@@ -99,20 +99,8 @@
 </div>
 
 <style>
-	.btn { padding: 9px 16px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; font-size: 13px; }
-	.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-	.btn.ghost { background: transparent; color: var(--text); }
-	.btn.danger { background: transparent; color: var(--red); border-color: var(--red); }
-	.btn.danger:hover { background: var(--red); color: #fff; }
-	.btn-sm { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: 600; }
-	.btn-sm.danger { background: transparent; color: var(--red); border-color: var(--red); }
+	.btn-sm { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: 600; background: transparent; color: var(--red); border-color: var(--red); }
 	.btn-sm.danger:hover { background: var(--red); color: #fff; }
 	.row { display: flex; gap: 12px; align-items: center; }
 	label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-dim); flex: 1; }
-	.inp { width: 100%; padding: 9px 12px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; }
-	.inp:focus { outline: none; border-color: var(--accent); }
-	select.inp option { background: var(--bg-elev); }
-	.toast { padding: 12px 16px; border-radius: 8px; margin: 16px 0; font-weight: 500; }
-	.toast.ok { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid var(--green); }
-	.toast.err { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid var(--red); }
 </style>

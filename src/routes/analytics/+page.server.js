@@ -1,7 +1,8 @@
 import { collections } from '$lib/server/db.js';
+import { resolveGames } from '$lib/server/robloxGame.js';
 
 export async function load() {
-	const { verifications, products } = await collections();
+	const { verifications } = await collections();
 
 	const total = await verifications.countDocuments({});
 	if (total === 0) {
@@ -11,52 +12,18 @@ export async function load() {
 	const now = new Date();
 	const dayAgo = new Date(now.getTime() - 24 * 3600 * 1000);
 	const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+	const monthAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
 
-	const [
-		last24h,
-		denied24h,
-		piracy,
-		volumeByDay,
-		recentDenied,
-		topProductsByChecks
-	] = await Promise.all([
+	const [last24h, denied24h, volumeByDay, topProductsByChecks] = await Promise.all([
 		verifications.countDocuments({ at: { $gte: dayAgo } }),
 		verifications.countDocuments({ at: { $gte: dayAgo }, owns: false }),
-
-		// PIRACY SIGNAL: per product, count DISTINCT placeIds that got DENIED (last 30d).
-		// Many distinct unlicensed places = likely pirated copies running.
-		verifications
-			.aggregate([
-				{ $match: { owns: false, placeId: { $nin: ['', '0', null] }, at: { $gte: new Date(now.getTime() - 30 * 24 * 3600 * 1000) } } },
-				{ $group: { _id: { product: '$product', place: '$placeId' }, hits: { $sum: 1 } } },
-				{ $group: { _id: '$_id.product', unlicensedPlaces: { $sum: 1 }, deniedChecks: { $sum: '$hits' } } },
-				{ $sort: { unlicensedPlaces: -1 } },
-				{ $limit: 15 }
-			])
-			.toArray(),
-
-		// Verification volume per day (last 14d), split allow/deny
 		verifications
 			.aggregate([
 				{ $match: { at: { $gte: new Date(now.getTime() - 14 * 24 * 3600 * 1000) } } },
-				{
-					$group: {
-						_id: { d: { $dateToString: { format: '%Y-%m-%d', date: '$at' } }, owns: '$owns' },
-						n: { $sum: 1 }
-					}
-				},
+				{ $group: { _id: { d: { $dateToString: { format: '%Y-%m-%d', date: '$at' } }, owns: '$owns' }, n: { $sum: 1 } } },
 				{ $sort: { '_id.d': 1 } }
 			])
 			.toArray(),
-
-		// recent denied checks (live piracy feed)
-		verifications
-			.find({ owns: false })
-			.sort({ at: -1 })
-			.limit(15)
-			.toArray(),
-
-		// busiest products by total checks (last 7d)
 		verifications
 			.aggregate([
 				{ $match: { at: { $gte: weekAgo } } },
@@ -67,17 +34,62 @@ export async function load() {
 			.toArray()
 	]);
 
-	// licensed-place counts per product (to contrast against unlicensed)
-	const licensedPlaces = await verifications
+	// DETAILED PIRACY: per (product, place) where DENIED in last 30d — these are the suspect games.
+	const suspects = await verifications
 		.aggregate([
-			{ $match: { owns: true, placeId: { $nin: ['', '0', null] } } },
-			{ $group: { _id: { product: '$product', place: '$placeId' } } },
-			{ $group: { _id: '$_id.product', n: { $sum: 1 } } }
+			{ $match: { owns: false, placeId: { $nin: ['', '0', null] }, at: { $gte: monthAgo } } },
+			{
+				$group: {
+					_id: { product: '$product', place: '$placeId' },
+					hits: { $sum: 1 },
+					lastSeen: { $max: '$at' },
+					placeOwner: { $last: '$placeOwner' }
+				}
+			},
+			{ $sort: { hits: -1 } },
+			{ $limit: 60 } // cap resolution work
 		])
 		.toArray();
-	const licMap = Object.fromEntries(licensedPlaces.map((l) => [l._id, l.n]));
 
-	// merge volume by day into a clean series
+	// Also: which places ARE licensed (to avoid false-flagging a place that also has legit checks)
+	const licensedPlaces = new Set(
+		(
+			await verifications
+				.aggregate([
+					{ $match: { owns: true, placeId: { $nin: ['', '0', null] } } },
+					{ $group: { _id: '$placeId' } }
+				])
+				.toArray()
+		).map((r) => r._id)
+	);
+
+	// Resolve game names for all suspect places
+	const games = await resolveGames(suspects.map((s) => s._id.place));
+
+	// Build per-product piracy with named suspect games
+	const byProduct = {};
+	for (const s of suspects) {
+		const prod = s._id.product || '(unknown)';
+		const place = s._id.place;
+		if (!byProduct[prod]) byProduct[prod] = { product: prod, suspects: [], totalDenied: 0 };
+		byProduct[prod].suspects.push({
+			placeId: place,
+			hits: s.hits,
+			lastSeen: s.lastSeen,
+			alsoLicensed: licensedPlaces.has(place), // true = probably a real customer not yet linked
+			game: games[place] || { placeId: place, name: null, creator: null, url: `https://www.roblox.com/games/${place}` }
+		});
+		byProduct[prod].totalDenied += s.hits;
+	}
+
+	const piracy = Object.values(byProduct)
+		.map((p) => ({
+			...p,
+			unlicensedPlaces: p.suspects.filter((s) => !s.alsoLicensed).length
+		}))
+		.sort((a, b) => b.unlicensedPlaces - a.unlicensedPlaces);
+
+	// volume series
 	const days = {};
 	for (const row of volumeByDay) {
 		const d = row._id.d;
@@ -89,20 +101,8 @@ export async function load() {
 	return {
 		empty: false,
 		kpis: { total, last24h, denied24h },
-		piracy: piracy.map((p) => ({
-			product: p._id || '(unknown)',
-			unlicensedPlaces: p.unlicensedPlaces,
-			deniedChecks: p.deniedChecks,
-			licensedPlaces: licMap[p._id] || 0
-		})),
+		piracy,
 		volume: Object.values(days),
-		recentDenied: recentDenied.map((r) => ({
-			at: r.at,
-			product: r.product,
-			clientRoblox: r.clientRoblox,
-			placeId: r.placeId,
-			reason: r.reason
-		})),
 		topProducts: topProductsByChecks.map((t) => ({ product: t._id || '(unknown)', checks: t.checks, denied: t.denied }))
 	};
 }

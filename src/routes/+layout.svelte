@@ -26,7 +26,7 @@
 			>{item.label}</a>
 		{/each}
 		<div style="margin-top:auto; padding:10px; font-size:11px;" class="muted">
-			SSH-tunnel only · admin
+			SSH-tunnel only · admin · v1
 		</div>
 	</aside>
 	<div class="content">

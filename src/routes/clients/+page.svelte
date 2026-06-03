@@ -28,19 +28,24 @@
 
 <div class="card" style="padding:0;">
 	<table>
-		<thead><tr><th>Roblox</th><th>Roblox ID</th><th>Discord ID</th><th>Licenses</th><th>Linked</th></tr></thead>
+		<thead><tr><th>Roblox</th><th>Roblox ID</th><th>Discord ID</th><th>Discord</th><th>Licenses</th><th>Linked</th></tr></thead>
 		<tbody>
 			{#each data.clients as c}
 				<tr>
 					<td><a href={`/clients/${c.id}`}><strong>{c.robloxName}</strong></a></td>
 					<td class="muted">{c.roblox}</td>
 					<td class="muted">{c.discord}</td>
+					<td>
+						{#if c.inServer === true}<span class="badge green">In server</span>
+						{:else if c.inServer === false}<span class="badge red">Left</span>
+						{:else}<span class="badge yellow">?</span>{/if}
+					</td>
 					<td><span class="badge {c.licenses > 0 ? 'green' : 'yellow'}">{c.licenses}</span></td>
 					<td class="muted">{c.created ? new Date(c.created).toLocaleDateString('en-GB', { dateStyle: 'medium' }) : '—'}</td>
 				</tr>
 			{/each}
 			{#if data.clients.length === 0}
-				<tr><td colspan="5" class="muted" style="text-align:center; padding:30px;">No clients found.</td></tr>
+				<tr><td colspan="6" class="muted" style="text-align:center; padding:30px;">No clients found.</td></tr>
 			{/if}
 		</tbody>
 	</table>

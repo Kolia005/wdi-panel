@@ -73,7 +73,8 @@ export async function load({ params }) {
 			robloxName: names[String(client.roblox)]?.name || client.roblox,
 			robloxDisplay: names[String(client.roblox)]?.displayName || '',
 			discord: client.discord,
-			created: client.created
+			created: client.created,
+			inServer: client.inServer
 		},
 		licenses: licenses.map((l) => ({
 			id: String(l._id),

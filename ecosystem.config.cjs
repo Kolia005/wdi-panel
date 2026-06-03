@@ -6,7 +6,8 @@ module.exports = {
     env: {
       PORT: "8443",
       HOST: "127.0.0.1",
-      MONGO_URI: "mongodb://wdipanel:d3352bc54ba20a3dc4b75e2ed8073297a4ec0f9a@127.0.0.1:27017/wdi?authSource=wdi"
+      MONGO_URI: "mongodb://wdipanel:d3352bc54ba20a3dc4b75e2ed8073297a4ec0f9a@127.0.0.1:27017/wdi?authSource=wdi",
+      INTERNAL_SECRET: "e071f9a93d0af47dd085d470710a8155811cbf0dbcb88be3"
     }
   }]
 }

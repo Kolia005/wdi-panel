@@ -9,6 +9,8 @@
 		{ href: '/clients', label: 'Clients' },
 		{ href: '/products', label: 'Products' },
 		{ href: '/licenses', label: 'Licenses' },
+		{ href: '/broadcast', label: 'Broadcast' },
+		{ href: '/webstore', label: 'Web Store' },
 		{ href: '/analytics', label: 'Analytics' },
 		{ href: '/audit', label: 'Audit Log' },
 		{ href: '/system', label: 'System' }
@@ -26,7 +28,7 @@
 			>{item.label}</a>
 		{/each}
 		<div style="margin-top:auto; padding:10px; font-size:11px;" class="muted">
-			SSH-tunnel only · admin · v1
+			SSH-tunnel only · admin
 		</div>
 	</aside>
 	<div class="content">

@@ -44,7 +44,8 @@ export async function load({ params }) {
 					created: 1,
 					clientId: '$client._id',
 					roblox: { $ifNull: ['$client.roblox', '(deleted)'] },
-					discord: { $ifNull: ['$client.discord', '?'] }
+					discord: { $ifNull: ['$client.discord', '?'] },
+					inServer: '$client.inServer'
 				}
 			}
 		])
@@ -67,7 +68,8 @@ export async function load({ params }) {
 			roblox: o.roblox,
 			robloxName: names[String(o.roblox)]?.name || o.roblox,
 			discord: o.discord,
-			created: o.created
+			created: o.created,
+			inServer: o.inServer
 		}))
 	};
 }

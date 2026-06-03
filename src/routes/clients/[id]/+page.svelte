@@ -19,7 +19,11 @@
 <div style="display:flex; align-items:center; gap:18px; margin:18px 0 26px;">
 	<img src={`https://www.roblox.com/headshot-thumbnail/image?userId=${client.roblox}&width=150&height=150&format=png`} alt="avatar" style="width:80px; height:80px; border-radius:12px; background:var(--bg-card); border:1px solid var(--border);" />
 	<div style="flex:1;">
-		<h1 class="page-title" style="margin:0;">{client.robloxName}</h1>
+		<h1 class="page-title" style="margin:0;">{client.robloxName}
+			{#if client.inServer === true}<span class="badge green" style="font-size:12px; vertical-align:middle;">In server</span>
+			{:else if client.inServer === false}<span class="badge red" style="font-size:12px; vertical-align:middle;">Left server — can't DM</span>
+			{:else}<span class="badge yellow" style="font-size:12px; vertical-align:middle;">membership unknown</span>{/if}
+		</h1>
 		{#if client.robloxDisplay && client.robloxDisplay !== client.robloxName}<div class="muted">"{client.robloxDisplay}"</div>{/if}
 	</div>
 	<div style="display:flex; gap:8px;">

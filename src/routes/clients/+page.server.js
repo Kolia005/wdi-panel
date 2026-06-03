@@ -54,7 +54,8 @@ export async function load({ url }) {
 			robloxName: names[String(r.roblox)]?.name || r.roblox,
 			discord: r.discord,
 			created: r.created,
-			licenses: countMap[String(r._id)] || 0
+			licenses: countMap[String(r._id)] || 0,
+			inServer: r.inServer
 		}))
 	};
 }

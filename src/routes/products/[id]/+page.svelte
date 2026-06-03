@@ -56,17 +56,22 @@
 <div class="card">
 	<h2>Owners ({owners.length})</h2>
 	<table>
-		<thead><tr><th>Roblox</th><th>Roblox ID</th><th>Discord ID</th><th>Granted</th></tr></thead>
+		<thead><tr><th>Roblox</th><th>Roblox ID</th><th>Discord ID</th><th>Discord</th><th>Granted</th></tr></thead>
 		<tbody>
 			{#each owners as o}
 				<tr>
 					<td>{#if o.clientId}<a href={`/clients/${o.clientId}`}>{o.robloxName}</a>{:else}{o.robloxName}{/if}</td>
 					<td class="muted">{o.roblox}</td>
 					<td class="muted">{o.discord}</td>
+					<td>
+						{#if o.inServer === true}<span class="badge green">In server</span>
+						{:else if o.inServer === false}<span class="badge red">Left</span>
+						{:else}<span class="badge yellow">?</span>{/if}
+					</td>
 					<td class="muted">{fmtDate(o.created)}</td>
 				</tr>
 			{/each}
-			{#if owners.length === 0}<tr><td colspan="4" class="muted" style="text-align:center; padding:24px;">No owners yet.</td></tr>{/if}
+			{#if owners.length === 0}<tr><td colspan="5" class="muted" style="text-align:center; padding:24px;">No owners yet.</td></tr>{/if}
 		</tbody>
 	</table>
 </div>

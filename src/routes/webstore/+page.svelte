@@ -21,12 +21,12 @@
 		<h2>⚠️ Held purchases — need manual action</h2>
 		<p class="muted" style="font-size:13px; margin-top:-6px;">These paid but couldn't auto-grant (bad Roblox name or unmapped product). Resolve each by entering the correct Roblox ID + product.</p>
 		<table>
-			<thead><tr><th>Wix order</th><th>Wix product</th><th>Typed Roblox</th><th>Reason</th><th>When</th><th></th></tr></thead>
+			<thead><tr><th>Wix order</th><th>Wix product (ID)</th><th>Typed Roblox</th><th>Reason</th><th>When</th><th></th></tr></thead>
 			<tbody>
 				{#each data.purchases.filter((p) => p.status === 'held') as p}
 					<tr>
 						<td class="muted">{p.wixOrderId || '—'}</td>
-						<td>{p.wixProduct}</td>
+						<td>{p.wixProduct}{#if p.wixProductId}<br><span class="muted" style="font-size:11px;">id: {p.wixProductId}</span>{/if}</td>
 						<td class="muted">{p.robloxInput}</td>
 						<td><span class="badge yellow">{p.reason}</span></td>
 						<td class="muted">{fmtDate(p.at)}</td>
@@ -55,9 +55,10 @@
 
 <div class="card">
 	<h2>Product mapping (Wix name → WDI product)</h2>
-	<p class="muted" style="font-size:13px; margin-top:-6px;">Auto-matching tries exact name first; add a mapping here when your Wix product name differs from the WDI product name.</p>
+	<p class="muted" style="font-size:13px; margin-top:-6px;">Auto-matching tries Wix product ID first, then exact name. <strong>Use the Wix product ID</strong> if you have multiple Wix products with the same name (names alone can't tell them apart). Leave ID blank to map by name.</p>
 	<form method="POST" action="?/saveMapping" use:enhance class="resolverow" style="margin-bottom:14px;">
-		<input class="inp" name="wixName" placeholder="Exact Wix product name" required />
+		<input class="inp" name="wixProductId" placeholder="Wix product ID (recommended)" />
+		<input class="inp" name="wixName" placeholder="Wix product name (label / fallback)" />
 		<select class="inp" name="productId" required>
 			<option value="">WDI product…</option>
 			{#each data.products as pr}<option value={pr.id}>{pr.name}</option>{/each}
@@ -65,10 +66,11 @@
 		<button class="btn primary" type="submit">Save mapping</button>
 	</form>
 	<table>
-		<thead><tr><th>Wix name</th><th>→ WDI product</th><th></th></tr></thead>
+		<thead><tr><th>Wix product ID</th><th>Wix name</th><th>→ WDI product</th><th></th></tr></thead>
 		<tbody>
 			{#each data.mappings as m}
 				<tr>
+					<td class="muted" style="font-size:12px;">{m.wixProductId || '— (by name)'}</td>
 					<td>{m.wixName}</td>
 					<td><strong>{m.productName}</strong></td>
 					<td class="right">
@@ -79,9 +81,10 @@
 					</td>
 				</tr>
 			{/each}
-			{#if data.mappings.length === 0}<tr><td colspan="3" class="muted" style="text-align:center; padding:16px;">No custom mappings. Exact-name matches still work automatically.</td></tr>{/if}
+			{#if data.mappings.length === 0}<tr><td colspan="4" class="muted" style="text-align:center; padding:16px;">No custom mappings. Exact-name matches still work automatically.</td></tr>{/if}
 		</tbody>
 	</table>
+	<p class="muted" style="font-size:12px; margin-top:8px;">💡 To find a Wix product's ID: it's in the product's editor URL in your Wix dashboard, or shown on held purchases below.</p>
 </div>
 
 <div class="card">

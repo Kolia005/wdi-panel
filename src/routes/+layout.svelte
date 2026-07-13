@@ -11,6 +11,7 @@
 		{ href: '/licenses', label: 'Licenses' },
 		{ href: '/broadcast', label: 'Broadcast' },
 		{ href: '/webstore', label: 'Web Store' },
+		{ href: '/security', label: 'Security' },
 		{ href: '/analytics', label: 'Analytics' },
 		{ href: '/audit', label: 'Audit Log' },
 		{ href: '/system', label: 'System' }

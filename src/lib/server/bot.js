@@ -40,3 +40,25 @@ export async function syncMembership() {
 	const { data } = await axios.post(`${BOT_BASE}/sync-membership`, {}, { headers: headers(), timeout: 60000 });
 	return data;
 }
+
+// --- Whitelist security: remote kill list + pack enforcement (bot /internal endpoints) ---
+export async function getKills() {
+	const { data } = await axios.get(`${BOT_BASE}/kills`, { headers: headers(), timeout: 10000 });
+	return data;
+}
+export async function addKill(scope, value, reason, by) {
+	const { data } = await axios.post(`${BOT_BASE}/kill`, { scope, value, reason, by }, { headers: headers(), timeout: 10000 });
+	return data;
+}
+export async function removeKill(scope, value) {
+	const { data } = await axios.post(`${BOT_BASE}/unkill`, { scope, value }, { headers: headers(), timeout: 10000 });
+	return data;
+}
+export async function getEnforcement() {
+	const { data } = await axios.get(`${BOT_BASE}/enforce`, { headers: headers(), timeout: 10000 });
+	return data;
+}
+export async function setEnforcement(pack, mode) {
+	const { data } = await axios.post(`${BOT_BASE}/enforce`, { pack, mode }, { headers: headers(), timeout: 10000 });
+	return data;
+}

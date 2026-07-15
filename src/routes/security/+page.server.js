@@ -1,11 +1,12 @@
-import { collections } from '$lib/server/db.js';
+import { collections, ObjectId } from '$lib/server/db.js';
 import { getKills, addKill, removeKill, getEnforcement, setEnforcement } from '$lib/server/bot.js';
 import { audit } from '$lib/server/audit.js';
 import { fail } from '@sveltejs/kit';
 
 export async function load() {
-	const { products } = await collections();
+	const { products, securityAlerts } = await collections();
 	const productList = await products.find({}, { projection: { name: 1 } }).sort({ name: 1 }).toArray();
+	const alertDocs = await securityAlerts.find({}).sort({ active: -1, updated: -1 }).limit(100).toArray();
 
 	let kills = [];
 	let enforcement = {};
@@ -15,11 +16,44 @@ export async function load() {
 	return {
 		products: productList.map((p) => p.name),
 		kills: kills.map((k) => ({ scope: k.scope, value: k.value, reason: k.reason || '', created: k.created })),
-		enforcement
+		enforcement,
+		alerts: alertDocs.map((a) => ({
+			id: String(a._id),
+			type: a.type,
+			severity: a.severity || 'warning',
+			title: a.title,
+			message: a.message,
+			robloxId: a.robloxId || '',
+			universeId: a.universeId || '',
+			placeId: a.placeId || '',
+			active: Boolean(a.active),
+			acknowledgedAt: a.acknowledgedAt || null,
+			created: a.created,
+			updated: a.updated,
+			resolvedAt: a.resolvedAt || null
+		})),
+		alertCounts: {
+			active: alertDocs.filter((a) => a.active).length,
+			unacknowledged: alertDocs.filter((a) => a.active && !a.acknowledgedAt).length
+		}
 	};
 }
 
 export const actions = {
+	ackAlert: async ({ request }) => {
+		const fd = await request.formData();
+		const id = String(fd.get('id') || '');
+		if (!ObjectId.isValid(id)) return fail(400, { ok: false, message: 'Invalid alert ID.' });
+		const { securityAlerts } = await collections();
+		const result = await securityAlerts.updateOne(
+			{ _id: new ObjectId(id) },
+			{ $set: { acknowledgedAt: new Date(), acknowledgedBy: 'panel', updated: new Date() } }
+		);
+		if (!result.matchedCount) return fail(404, { ok: false, message: 'Alert not found.' });
+		await audit('security.alert.acknowledge', { alertId: id });
+		return { ok: true, message: 'Security alert acknowledged.' };
+	},
+
 	setEnforce: async ({ request }) => {
 		const fd = await request.formData();
 		const pack = fd.get('pack');

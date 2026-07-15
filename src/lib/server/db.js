@@ -24,7 +24,9 @@ export async function collections() {
 		clients: database.collection('clients'),
 		products: database.collection('products'),
 		whitelists: database.collection('whitelists'),
-		verifications: database.collection('verifications')
+		verifications: database.collection('verifications'),
+		experienceGrants: database.collection('experiencegrants'),
+		securityAlerts: database.collection('securityalerts')
 	};
 }
 

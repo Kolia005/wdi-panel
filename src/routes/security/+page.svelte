@@ -9,6 +9,8 @@
 	let killValue = $state('');
 	let killReason = $state('');
 	let killForm = $state();
+	let startAccessForm = $state();
+	let endAccessForm = $state();
 
 	function fmtDate(d) { return d ? new Date(d).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) : '—'; }
 	const overrides = $derived(Object.entries(data.enforcement || {}));
@@ -21,6 +23,43 @@
 <p class="muted" style="margin-top:-8px;">Remote controls for the in-game whitelist. Every change is <strong>signed</strong> into <code>/verify</code> and applies to every game on its next check.</p>
 
 {#if form?.message}<div class="toast {form.ok === false ? 'err' : 'ok'}">{form.message}</div>{/if}
+
+<div class="card">
+ <h2>Open access and end-of-access message</h2>
+ <p class="muted">Set the message shown by updated AVCS copies when access is denied. Saving the message does not start a trial.</p>
+ {#if data.accessCampaign}
+  <form method="POST" action="?/saveAccessCampaign" use:enhance style="display:grid; gap:12px; margin-top:16px;">
+   <label><input type="checkbox" name="enabled" checked={data.accessCampaign.enabled} /> Show the configured message when access is denied</label>
+   <fieldset style="border:1px solid var(--border); border-radius:8px; padding:12px;">
+    <legend>Products</legend>
+    {#each data.products as product}
+     <label style="display:block; margin:6px 0;"><input type="checkbox" name="products" value={product} checked={data.accessCampaign.products.includes(product)} /> {product}</label>
+    {/each}
+   </fieldset>
+   <label style={lblStyle}>Title<input class="inp" name="title" maxlength="120" value={data.accessCampaign.title} required /></label>
+   <label style={lblStyle}>Player message<textarea class="inp" name="message" maxlength="1200" rows="3" required>{data.accessCampaign.message}</textarea></label>
+   <p class="muted" style="font-size:12px; margin:0;">For players, refer to the experience's Social Links. Roblox does not permit direct Discord invites inside an experience.</p>
+   <label style={lblStyle}>Studio owner message<textarea class="inp" name="studioMessage" maxlength="1200" rows="3" required>{data.accessCampaign.studioMessage}</textarea></label>
+   <label style={lblStyle}>Discord invite for Studio owners<input class="inp" name="inviteUrl" type="url" maxlength="200" value={data.accessCampaign.inviteUrl} placeholder="https://discord.gg/…" /></label>
+   <div><button class="btn" type="submit">Save message</button></div>
+  </form>
+  {#if data.accessCampaign.trial}
+   <p><strong>{data.accessCampaign.trial.endsAt * 1000 > Date.now() ? 'Open access is active' : 'Open access has ended'}</strong> · Ends {fmtDate(data.accessCampaign.trial.endsAt * 1000)}</p>
+  {:else}<p class="muted">No trial has been started.</p>{/if}
+  <p class="muted" style="font-size:13px;">The selected products are open for 48 hours. At the deadline, full whitelist enforcement resumes on new license checks. Existing servers keep their startup authorization until they close. Paid licenses continue working. Campaign timing takes priority over the manual pack controls below.</p>
+  <div style="display:flex; flex-wrap:wrap; gap:10px;">
+   <form method="POST" action="?/startAccessCampaign" bind:this={startAccessForm} use:enhance>
+    <button class="btn" type="button" disabled={!data.accessCampaign.enabled || (data.accessCampaign.trial && data.accessCampaign.trial.endsAt * 1000 > Date.now())}
+     onclick={() => confirmAction({ title: 'Start 48-hour open access', message: `Open these products to everyone for 48 hours: ${data.accessCampaign.products.join(', ')}? The countdown starts immediately.`, run: () => startAccessForm.requestSubmit() })}>Start 48-hour open access</button>
+   </form>
+   {#if data.accessCampaign.trial && data.accessCampaign.trial.endsAt * 1000 > Date.now()}
+    <form method="POST" action="?/endAccessCampaign" bind:this={endAccessForm} use:enhance>
+     <button class="btn danger" type="button" onclick={() => confirmAction({ title: 'End open access now', message: 'Restore full whitelist enforcement for new license checks now?', danger: true, run: () => endAccessForm.requestSubmit() })}>End open access now</button>
+    </form>
+   {/if}
+  </div>
+ {:else}<p class="muted">Access settings could not be loaded. Reload before making changes.</p>{/if}
+</div>
 
 <div class="card alert-card">
 	<div class="alert-heading">

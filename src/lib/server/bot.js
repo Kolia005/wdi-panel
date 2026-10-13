@@ -62,3 +62,21 @@ export async function setEnforcement(pack, mode) {
 	const { data } = await axios.post(`${BOT_BASE}/enforce`, { pack, mode }, { headers: headers(), timeout: 10000 });
 	return data;
 }
+
+export async function getAccessCampaign() {
+ const { data } = await axios.get(`${BOT_BASE}/access-campaign`, { headers: headers(), timeout: 10000 });
+ return data;
+}
+/** @param {Record<string, unknown>} settings */
+export async function saveAccessCampaign(settings) {
+ const { data } = await axios.post(`${BOT_BASE}/access-campaign`, settings, { headers: headers(), timeout: 10000 });
+ return data;
+}
+export async function startAccessCampaign() {
+ const { data } = await axios.post(`${BOT_BASE}/access-campaign/start`, {}, { headers: headers(), timeout: 10000 });
+ return data;
+}
+export async function endAccessCampaign() {
+ const { data } = await axios.post(`${BOT_BASE}/access-campaign/end`, {}, { headers: headers(), timeout: 10000 });
+ return data;
+}
